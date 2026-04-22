@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 extern crate electrum_client;
 
 use electrum_client::{Client, ConfigBuilder, ElectrumApi, Socks5Config};

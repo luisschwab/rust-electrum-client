@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 #![warn(missing_docs)]
 
 //! This library provides an extendable Bitcoin-Electrum client that supports batch calls,

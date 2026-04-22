@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use std::cmp;
 use std::io::{self, Read, Write};

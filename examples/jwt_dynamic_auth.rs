@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! # JWT Dynamic Authentication
 //!
 //! ## Advanced: Token Refresh with Keycloak

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Utilities helping to handle Electrum-related data.
 
 use crate::types::GetMerkleRes;
