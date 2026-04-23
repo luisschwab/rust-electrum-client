@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Raw client
 //!
 //! This module contains the definition of the raw client that wraps the transport method

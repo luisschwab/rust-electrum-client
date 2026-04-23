@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! # JWT Static Authentication with Electrum Client
 //!
 //! This example demonstrates how to use a static JWT_TOKEN authentication with the

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Return types
 //!
 //! This module contains definitions of all the complex data structures that are returned by calls

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT OR Apache-2.0
+
 //! Batch utilities
 //!
 //! This module contains definitions and helper functions used when making batch calls.
