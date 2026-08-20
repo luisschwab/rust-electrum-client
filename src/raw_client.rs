@@ -702,23 +702,23 @@ impl<S: Read + Write> RawClient<S> {
                 loop {
                     raw_resp.clear();
 
-                    match reader.read_line(&mut raw_resp) {
-                        Ok(n_bytes_read) => {
-                            if n_bytes_read == 0 {
-                                trace!("Reached UnexpectedEof");
-                                return Err(Error::IOError(std::io::Error::new(
-                                    std::io::ErrorKind::UnexpectedEof,
-                                    "unexpected EOF",
-                                )));
-                            }
+                    let read_result = reader.read_line(&mut raw_resp).and_then(|bytes_read| {
+                        if bytes_read == 0 {
+                            trace!("Reached UnexpectedEof");
+                            Err(std::io::Error::new(
+                                std::io::ErrorKind::UnexpectedEof,
+                                "unexpected EOF",
+                            ))
+                        } else {
+                            Ok(())
                         }
-                        Err(e) => {
-                            let error = Arc::new(e);
-                            for (_, s) in self.waiting_map.lock().unwrap().drain() {
-                                s.send(ChannelMessage::Error(error.clone()))?;
-                            }
-                            return Err(Error::SharedIOError(error));
+                    });
+                    if let Err(e) = read_result {
+                        let error = Arc::new(e);
+                        for (_, s) in self.waiting_map.lock().unwrap().drain() {
+                            s.send(ChannelMessage::Error(error.clone()))?;
                         }
+                        return Err(Error::SharedIOError(error));
                     }
                     trace!("<== {}", raw_resp);
 
@@ -1451,14 +1451,16 @@ mod test {
     use std::{
         io::{self, Cursor, Read, Write},
         str::FromStr,
-        sync::{Arc, Mutex},
+        sync::{mpsc, Arc, Mutex},
+        time::Duration,
     };
 
     use crate::utils;
 
-    use super::{ElectrumSslStream, RawClient};
+    use super::{ChannelMessage, ElectrumSslStream, RawClient};
     use crate::api::ElectrumApi;
     use crate::config::AuthProvider;
+    use crate::Error;
 
     // it's the default live testing electrum server, if you'd like to use a custom one set it up through
     // the environment variable `TEST_ELECTRUM_SERVER`.
@@ -1518,6 +1520,39 @@ mod test {
     fn assert_server_version_request(request: &serde_json::Value) {
         assert_eq!(request["method"], "server.version");
         assert_eq!(request["params"], serde_json::json!(["", ["1.4", "1.6"]]));
+    }
+
+    #[test]
+    fn clean_eof_wakes_all_waiting_requests() {
+        let client = RawClient::from(MockStream::new(Vec::new()));
+        let (first_sender, first_receiver) = mpsc::channel();
+        let (second_sender, second_receiver) = mpsc::channel();
+        {
+            let mut waiting_map = client.waiting_map.lock().unwrap();
+            waiting_map.insert(1, first_sender);
+            waiting_map.insert(2, second_sender);
+        }
+
+        let reader_error = client._reader_thread(None).unwrap_err();
+        let first_message = first_receiver
+            .recv_timeout(Duration::from_secs(1))
+            .expect("clean EOF must wake the first waiting request");
+        let second_message = second_receiver
+            .recv_timeout(Duration::from_secs(1))
+            .expect("clean EOF must wake the second waiting request");
+
+        assert!(client.waiting_map.lock().unwrap().is_empty());
+        assert!(matches!(
+            reader_error,
+            Error::SharedIOError(error) if error.kind() == io::ErrorKind::UnexpectedEof
+        ));
+        for message in [first_message, second_message] {
+            assert!(matches!(
+                message,
+                ChannelMessage::Error(error)
+                    if error.kind() == io::ErrorKind::UnexpectedEof
+            ));
+        }
     }
 
     fn get_test_auth_client(
